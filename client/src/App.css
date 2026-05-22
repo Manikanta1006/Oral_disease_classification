@@ -42,7 +42,8 @@
 }
 
 h1,
-h2 {
+h2,
+h3 {
   margin: 0;
   color: #172033;
   letter-spacing: 0;
@@ -56,6 +57,12 @@ h1 {
 h2 {
   font-size: clamp(1.8rem, 5vw, 3.2rem);
   text-transform: capitalize;
+}
+
+h3 {
+  margin-bottom: 12px;
+  font-size: 0.92rem;
+  text-transform: uppercase;
 }
 
 .summary {
@@ -129,8 +136,27 @@ button:disabled {
   opacity: 0.65;
 }
 
-.preview-frame {
+.preview-block {
   margin-top: 22px;
+}
+
+.preview-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  color: #172033;
+  font-weight: 700;
+}
+
+.preview-heading strong {
+  color: #647084;
+  font-size: 0.92rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.preview-frame {
   width: 100%;
   aspect-ratio: 16 / 10;
   border: 1px solid #dce2ec;
@@ -142,12 +168,56 @@ button:disabled {
   color: #647084;
 }
 
+.preview-empty {
+  display: grid;
+  gap: 8px;
+  text-align: center;
+}
+
+.preview-empty span {
+  color: #172033;
+  font-weight: 700;
+}
+
+.preview-empty small {
+  color: #647084;
+}
+
 .preview-frame img {
   width: 100%;
   height: 100%;
   object-fit: contain;
   display: block;
   background: #111827;
+}
+
+.file-details {
+  margin: 12px 0 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.file-detail {
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid #dce2ec;
+  border-radius: 8px;
+  background: #fbfcfe;
+}
+
+.file-detail dt {
+  color: #647084;
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.file-detail dd {
+  margin: 4px 0 0;
+  color: #172033;
+  font-weight: 700;
+  overflow-wrap: anywhere;
 }
 
 .message {
@@ -164,10 +234,28 @@ button:disabled {
   width: 100%;
 }
 
-.confidence {
-  margin: 10px 0 22px;
+.prediction-lines {
+  margin-top: 10px;
+  display: grid;
+  gap: 12px;
+}
+
+.prediction-line {
+  display: grid;
+  grid-template-columns: minmax(140px, 0.55fr) 1fr;
+  gap: 12px;
+  align-items: baseline;
   color: #647084;
-  font-size: 1.1rem;
+}
+
+.prediction-line strong {
+  color: #172033;
+  font-size: 1.25rem;
+  overflow-wrap: anywhere;
+}
+
+.probability-section {
+  margin-top: 28px;
 }
 
 .probabilities {
@@ -200,6 +288,14 @@ button:disabled {
   height: 100%;
   width: 0;
   display: block;
+  background: #0f766e;
+}
+
+.region-fill {
+  background: #2563eb;
+}
+
+.disease-fill {
   background: #0f766e;
 }
 
@@ -240,7 +336,9 @@ button:disabled {
   }
 
   .upload-form,
-  .probability-row {
+  .file-details,
+  .probability-row,
+  .prediction-line {
     grid-template-columns: 1fr;
   }
 

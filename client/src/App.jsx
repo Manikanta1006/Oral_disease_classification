@@ -1,12 +1,28 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import './App.css'
 
 function formatClassName(name) {
-  return name.replaceAll('_', ' ')
+  return name.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
 }
 
 function formatPercent(value) {
-  return `${Math.round(value * 100)}%`
+  if (typeof value !== 'number') {
+    return '0.0%'
+  }
+
+  return `${(value * 100).toFixed(1)}%`
+}
+
+function formatFileSize(size) {
+  if (!size) {
+    return '0 KB'
+  }
+
+  if (size < 1024 * 1024) {
+    return `${(size / 1024).toFixed(1)} KB`
+  }
+
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`
 }
 
 function App() {
@@ -16,13 +32,41 @@ function App() {
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
-  const sortedProbabilities = useMemo(() => {
-    if (!result?.probabilities) {
+  const sortedDiseaseProbabilities = useMemo(() => {
+    if (!result?.probabilities?.diseases) {
       return []
     }
 
-    return Object.entries(result.probabilities).sort((a, b) => b[1] - a[1])
+    return Object.entries(result.probabilities.diseases).sort((a, b) => b[1] - a[1])
   }, [result])
+
+  const sortedRegionProbabilities = useMemo(() => {
+    if (!result?.probabilities?.regions) {
+      return []
+    }
+
+    return Object.entries(result.probabilities.regions).sort((a, b) => b[1] - a[1])
+  }, [result])
+
+  const fileDetails = useMemo(() => {
+    if (!file) {
+      return null
+    }
+
+    return [
+      { label: 'Name', value: file.name },
+      { label: 'Type', value: file.type || 'Image file' },
+      { label: 'Size', value: formatFileSize(file.size) },
+    ]
+  }, [file])
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl)
+      }
+    }
+  }, [previewUrl])
 
   function handleFileChange(event) {
     const selectedFile = event.target.files?.[0]
@@ -76,8 +120,8 @@ function App() {
           <p className="eyebrow">AI oral screening</p>
           <h1>Oral Disease Classifier</h1>
           <p className="summary">
-            Upload an oral image to classify healthy tissue, mouth ulcer, tooth
-            decay, or gingivitis.
+            Upload an oral image to detect the oral region and predict the
+            possible disease from the same CNN.
           </p>
         </div>
 
@@ -97,11 +141,32 @@ function App() {
           </button>
         </form>
 
-        <div className="preview-frame">
-          {previewUrl ? (
-            <img src={previewUrl} alt="Selected oral scan preview" />
-          ) : (
-            <span>Image preview</span>
+        <div className="preview-block">
+          <div className="preview-heading">
+            <span>Selected image preview</span>
+            {file && <strong>{formatFileSize(file.size)}</strong>}
+          </div>
+
+          <div className="preview-frame">
+            {previewUrl ? (
+              <img src={previewUrl} alt="Selected oral scan preview" />
+            ) : (
+              <div className="preview-empty">
+                <span>Preview will show here</span>
+                <small>Choose one JPG, PNG, or WEBP image.</small>
+              </div>
+            )}
+          </div>
+
+          {fileDetails && (
+            <dl className="file-details">
+              {fileDetails.map((detail) => (
+                <div className="file-detail" key={detail.label}>
+                  <dt>{detail.label}</dt>
+                  <dd>{detail.value}</dd>
+                </div>
+              ))}
+            </dl>
           )}
         </div>
       </section>
@@ -116,24 +181,58 @@ function App() {
         {result && (
           <div className="result-card">
             <p className="eyebrow">Prediction</p>
-            <h2>{formatClassName(result.class)}</h2>
-            <p className="confidence">
-              Confidence {formatPercent(result.confidence)}
-            </p>
+            <div className="prediction-lines">
+              <div className="prediction-line">
+                <span>Detected Region:</span>
+                <strong>{result.detected_region || result.region?.name}</strong>
+              </div>
+              <div className="prediction-line">
+                <span>Possible Disease:</span>
+                <strong>{result.possible_disease || result.disease?.name}</strong>
+              </div>
+              <div className="prediction-line">
+                <span>Prediction Value:</span>
+                <strong>
+                  {result.prediction_percent ||
+                    formatPercent(result.prediction_value ?? result.confidence)}
+                </strong>
+              </div>
+            </div>
 
-            <div className="probabilities">
-              {sortedProbabilities.map(([name, value]) => (
-                <div className="probability-row" key={name}>
-                  <span className="probability-name">{formatClassName(name)}</span>
-                  <span className="probability-bar">
-                    <span
-                      className="probability-fill"
-                      style={{ width: `${value * 100}%` }}
-                    />
-                  </span>
-                  <span className="probability-value">{formatPercent(value)}</span>
-                </div>
-              ))}
+            <div className="probability-section">
+              <h3>Disease probabilities</h3>
+              <div className="probabilities">
+                {sortedDiseaseProbabilities.map(([name, value]) => (
+                  <div className="probability-row" key={name}>
+                    <span className="probability-name">{formatClassName(name)}</span>
+                    <span className="probability-bar">
+                      <span
+                        className="probability-fill disease-fill"
+                        style={{ width: `${value * 100}%` }}
+                      />
+                    </span>
+                    <span className="probability-value">{formatPercent(value)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="probability-section">
+              <h3>Region probabilities</h3>
+              <div className="probabilities">
+                {sortedRegionProbabilities.map(([name, value]) => (
+                  <div className="probability-row" key={name}>
+                    <span className="probability-name">{formatClassName(name)}</span>
+                    <span className="probability-bar">
+                      <span
+                        className="probability-fill region-fill"
+                        style={{ width: `${value * 100}%` }}
+                      />
+                    </span>
+                    <span className="probability-value">{formatPercent(value)}</span>
+                  </div>
+                ))}
+              </div>
             </div>
 
             <p className="note">

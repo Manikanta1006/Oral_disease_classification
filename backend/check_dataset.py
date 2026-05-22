@@ -1,6 +1,7 @@
 from pathlib import Path
 
-from config import CLASS_NAMES, IMAGE_EXTENSIONS
+from config import DISEASE_NAMES, REGION_NAMES
+from dataset_utils import collect_split_examples, summarize_examples, validate_split
 
 
 BASE_DIR = Path(__file__).resolve().parents[1]
@@ -8,12 +9,17 @@ DATASET_DIR = BASE_DIR / "dataset"
 SPLITS = ["train", "valid", "test"]
 
 
-def count_images(class_dir: Path):
-    return sum(
-        1
-        for path in class_dir.rglob("*")
-        if path.is_file() and path.suffix.lower() in IMAGE_EXTENSIONS
-    )
+def print_summary(split: str, summary: dict):
+    print(f"\n{split.upper()}")
+    print(f"  total: {summary['total']} images")
+
+    print("  regions:")
+    for name in REGION_NAMES:
+        print(f"    {name}: {summary['regions'][name]}")
+
+    print("  diseases:")
+    for name in DISEASE_NAMES:
+        print(f"    {name}: {summary['diseases'][name]}")
 
 
 def main():
@@ -21,29 +27,24 @@ def main():
 
     for split in SPLITS:
         split_dir = DATASET_DIR / split
-        print(f"\n{split.upper()}")
-
-        if not split_dir.is_dir():
-            print(f"  Missing folder: {split_dir}")
-            has_error = True
-            continue
-
-        for class_name in CLASS_NAMES:
-            class_dir = split_dir / class_name
-            if not class_dir.is_dir():
-                print(f"  {class_name}: missing folder")
+        if split in {"train", "valid"}:
+            try:
+                _examples, summary = validate_split(DATASET_DIR, split)
+            except (FileNotFoundError, ValueError) as exc:
+                print(f"\n{split.upper()}")
+                print(f"  {exc}")
                 has_error = True
                 continue
+        else:
+            examples = collect_split_examples(split_dir)
+            summary = summarize_examples(examples)
 
-            count = count_images(class_dir)
-            print(f"  {class_name}: {count} images")
-            if split in {"train", "valid"} and count == 0:
-                has_error = True
+        print_summary(split, summary)
 
     if has_error:
         raise SystemExit(
-            "\nDataset check failed. Add images to every train/valid class folder "
-            "before training."
+            "\nDataset check failed. Use folders like "
+            "dataset/train/inner_cheek/oral_ulcer/image.jpg for train and valid."
         )
 
     print("\nDataset check passed.")

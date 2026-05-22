@@ -1,13 +1,22 @@
-# Oral Disease Classification
+# Oral Region And Disease Classification
 
-TensorFlow image classification project for:
+TensorFlow image classification project for predicting two things from one oral image:
 
-- gingivitis
-- healthy
-- mouth_ulcer
-- tooth_decay
+- detected oral region, for example `inner_cheek`
+- possible disease, for example `oral_ulcer`
 
-The app trains a MobileNetV2 transfer learning model, serves predictions through a Flask API, and uses a React client for the full UI.
+The backend trains a MobileNetV2 transfer-learning CNN with two output heads:
+
+- `region`: oral organ/region prediction
+- `disease`: oral disease prediction
+
+The API and React UI show results like:
+
+```text
+Detected Region: Inner cheek
+Possible Disease: Oral ulcer
+Prediction Value: 84.2%
+```
 
 ## Project Structure
 
@@ -22,34 +31,56 @@ backend/
   train.py
   predict.py
   app.py
-  requirements.txt
 client/
   src/
-  package.json
-  vite.config.js
 ```
 
-Each `dataset` split must contain the same class folders:
+## Dataset Format
+
+For region and disease prediction, every image needs both labels. Put images in nested folders:
 
 ```text
-healthy/
-mouth_ulcer/
-tooth_decay/
-gingivitis/
+dataset/
+  train/
+    inner_cheek/
+      oral_ulcer/
+        image1.jpg
+      healthy/
+        image2.jpg
+    gums/
+      gingivitis/
+        image3.jpg
+  valid/
+    inner_cheek/
+      oral_ulcer/
+        image4.jpg
+  test/
+    inner_cheek/
+      oral_ulcer/
+        image5.jpg
 ```
 
-The code uses this fixed class order:
+Current region labels are defined in `backend/config.py`:
+
+```text
+inner_cheek
+gums
+tongue
+teeth
+lips
+palate
+```
+
+Current disease labels are:
 
 ```text
 gingivitis
 healthy
-mouth_ulcer
+oral_ulcer
 tooth_decay
 ```
 
-Keep those exact folder names. After training, the same order is saved in `backend/model/class_names.json` and used during prediction, so predictions do not shift from one class name to another.
-
-If your dataset is in COCO format with `_annotations.coco.json`, first convert or copy the images into these class folders. The current training script is an image classification trainer, not an object-detection/COCO trainer.
+If your folders still use `mouth_ulcer`, the trainer accepts it as an alias for `oral_ulcer`.
 
 ## Setup
 
@@ -67,27 +98,19 @@ npm install
 cd ..
 ```
 
-On Linux or Lightning AI:
+## Train The CNN
 
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
+1. Add images to `dataset/train/<region>/<disease>/`.
+2. Add validation images to `dataset/valid/<region>/<disease>/`.
+3. Make sure every region and every disease has at least one train and valid image.
 
-```bash
-cd client
-npm install
-cd ..
-```
-
-## Train
-
-Put your images inside the class folders under `dataset/train` and `dataset/valid`, then run:
+Check the dataset:
 
 ```bash
 python backend/check_dataset.py
 ```
+
+Train:
 
 ```bash
 python backend/train.py --epochs 15
@@ -96,14 +119,34 @@ python backend/train.py --epochs 15
 This creates:
 
 ```text
-backend/model/oral_disease_model.h5
-backend/model/class_names.json
+backend/model/oral_region_disease_model.keras
+backend/model/labels.json
+```
+
+For better accuracy, use more images per class and train longer:
+
+```bash
+python backend/train.py --epochs 30 --batch-size 16 --learning-rate 0.0001
 ```
 
 ## Test Prediction From Terminal
 
 ```bash
 python backend/predict.py path/to/image.jpg
+```
+
+Example output:
+
+```text
+Detected Region: Inner cheek
+Possible Disease: Oral ulcer
+Prediction Value: 84.2%
+```
+
+For full probabilities:
+
+```bash
+python backend/predict.py path/to/image.jpg --json
 ```
 
 ## Run In Development
@@ -150,41 +193,6 @@ Open:
 ```text
 http://localhost:8080
 ```
-
-## Deploy On Lightning AI
-
-1. Upload or clone this project into a Lightning AI Studio.
-2. Upload your dataset into the `dataset/` folder.
-3. Install dependencies:
-
-```bash
-pip install -r requirements.txt
-cd client
-npm install
-cd ..
-```
-
-4. Train the model:
-
-```bash
-python backend/train.py --epochs 15
-```
-
-5. Build the React UI:
-
-```bash
-cd client
-npm run build
-cd ..
-```
-
-6. Start the app:
-
-```bash
-python backend/app.py
-```
-
-Lightning usually exposes the running `PORT` automatically. The app also defaults to port `8080` when `PORT` is not set.
 
 ## Important
 
